@@ -53,23 +53,25 @@ jobs:
         path: .
       
 
-  # Uploads dependency graph to GitHub to receive Dependabot alerts 
+  # Uploads dependency graph to GitHub to receive Dependabot alerts
   update_dependence_graph:
-
-  
+    needs: maven_test          # ensure cache is created first
     runs-on: ubuntu-latest
 
     permissions:
       contents: read
 
     steps:
+      # Restore cached build so pom.xml is available
       - name: Restore cached build
         uses: actions/cache@v3
         with:
-          key: cached-build-${{github.sha}}
+          key: cached-build-${{ github.sha }}
           path: .
 
+      # Submit dependency graph
+      # https://github.com/marketplace/actions/maven-dependency-tree-dependency-submission
+      - name: Update dependency graph
+        uses: advanced-security/maven-dependency-submission-action@v3
 
-    # https://github.com/marketplace/actions/maven-dependency-tree-dependency-submission
-    - name: Update dependency graph
-      uses: advanced-security/maven-dependency-submission-action@v3
+
