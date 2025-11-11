@@ -1,17 +1,21 @@
 package edu.pitt.cs;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.FixMethodOrder;
-import org.junit.runners.MethodSorters;
-import static org.junit.Assert.*;
-
-import org.mockito.Mockito;
-import static org.mockito.Mockito.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+
+import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class RentACatUnitTest {
@@ -36,7 +40,14 @@ public class RentACatUnitTest {
 	@Before
 	public void setUp() throws Exception {
 		// INITIALIZE THE TEST FIXTURE
-		
+		r = RentACat.createInstance(InstanceType.IMPL);
+    c1 = mock(Cat.class);
+    c2 = mock(Cat.class);
+    c3 = mock(Cat.class);
+    stdout = System.out;
+    out = new ByteArrayOutputStream();
+    System.setOut(new PrintStream(out));
+
 		// 1. Create a new RentACat object and assign to r using a call to RentACat.createInstance(InstanceType).
 		// Passing InstanceType.IMPL as the first parameter will create a real RentACat object using your RentACatImpl implementation.
 		// Passing InstanceType.MOCK as the first parameter will create a mock RentACat object using Mockito.
@@ -91,9 +102,15 @@ public class RentACatUnitTest {
 	 * the class object of r instead of hardcoding it as RentACatImpl.
 	 */
 	@Test
-	public void testGetCatNullNumCats0() {
-		// TODO: Fill in
-	}
+	public void testGetCatNullNumCats0() throws Exception {
+    java.lang.reflect.Method getCatMethod = r.getClass().getDeclaredMethod("getCat", int.class);
+    getCatMethod.setAccessible(true);
+
+    Cat result = (Cat) getCatMethod.invoke(r, 2);
+
+    assertEquals(null, result);
+    assertEquals("Invalid cat ID." + newline, out.toString());
+}
 
 	/**
 	 * Test case for Cat getCat(int id).
@@ -111,9 +128,24 @@ public class RentACatUnitTest {
 	 * the class object of r instead of hardcoding it as RentACatImpl.
 	 */
 	@Test
-	public void testGetCatNumCats3() {
-		// TODO: Fill in
-	}
+	public void testGetCatNumCats3() throws Exception {
+    when(c1.getId()).thenReturn(1);
+    when(c2.getId()).thenReturn(2);
+    when(c3.getId()).thenReturn(3);
+
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+    java.lang.reflect.Method getCatMethod = r.getClass().getDeclaredMethod("getCat", int.class);
+    getCatMethod.setAccessible(true);
+
+
+    Cat result = (Cat) getCatMethod.invoke(r, 2);
+    assertNotNull(result);
+    assertEquals(2, result.getId());
+}
+
 
 	/**
 	 * Test case for String listCats().
@@ -126,7 +158,8 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testListCatsNumCats0() {
-		// TODO: Fill in
+		String result = r.listCats();
+    assertEquals("", result);
 	}
 
 	/**
@@ -141,7 +174,30 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testListCatsNumCats3() {
-		// TODO: Fill in
+	 when(c1.getId()).thenReturn(1);
+    when(c1.getName()).thenReturn("Jennyanydots");
+    when(c1.getRented()).thenReturn(false);
+    when(c1.toString()).thenReturn("ID 1. Jennyanydots");
+    when(c2.getId()).thenReturn(2);
+    when(c2.getName()).thenReturn("Old Deuteronomy");
+    when(c2.getRented()).thenReturn(false);
+    when(c2.toString()).thenReturn("ID 2. Old Deuteronomy");
+    when(c3.getId()).thenReturn(3);
+    when(c3.getName()).thenReturn("Mistoffelees");
+    when(c3.getRented()).thenReturn(false);
+    when(c3.toString()).thenReturn("ID 3. Mistoffelees");
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+
+    String result = r.listCats();
+    String expected =
+        "ID 1. Jennyanydots" + newline +
+        "ID 2. Old Deuteronomy" + newline +
+        "ID 3. Mistoffelees" + newline;
+
+    assertEquals(expected, result);
 	}
 
 	/**
@@ -161,7 +217,9 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testRenameFailureNumCats0() {
-		// TODO: Fill in
+		boolean result = r.renameCat(1, "Garfield");
+    assertFalse(result);
+    assertEquals("Invalid cat ID." + newline, out.toString());
 	}
 
 	/**
@@ -180,7 +238,20 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testRenameNumCat3() {
-		// TODO: Fill in
+	when(c1.getId()).thenReturn(1);
+    when(c2.getId()).thenReturn(2);
+    when(c3.getId()).thenReturn(3);
+
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+    // Act
+    boolean result = r.renameCat(2, "Garfield");
+
+    // Assert
+    assertTrue(result);
+    verify(c2).renameCat("Garfield"); // ensure correct cat renamed
 	}
 
 	/**
@@ -200,7 +271,22 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testRentCatNumCats3() {
-		// TODO: Fill in
+		 when(c1.getId()).thenReturn(1);
+    when(c2.getId()).thenReturn(2);
+    when(c3.getId()).thenReturn(3);
+
+    when(c2.getRented()).thenReturn(false); // cat 2 is available
+
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+    // Act
+    boolean result = r.rentCat(2);
+
+    // Assert
+    assertTrue(result);
+    verify(c2).rentCat(); 
 	}
 
 	/**
@@ -221,7 +307,18 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testRentCatFailureNumCats3() {
-		// TODO: Fill in
+		when(c1.getId()).thenReturn(1);
+    when(c2.getId()).thenReturn(2);
+    when(c3.getId()).thenReturn(3);
+    when(c2.getRented()).thenReturn(true);
+
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+    boolean result = r.rentCat(2);
+    assertFalse(result);
+    verify(c2, never()).rentCat(); 
 	}
 
 	/**
@@ -242,7 +339,19 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testReturnCatNumCats3() {
-		// TODO: Fill in
+		when(c1.getId()).thenReturn(1);
+    when(c2.getId()).thenReturn(2);
+    when(c3.getId()).thenReturn(3);
+    when(c2.getRented()).thenReturn(true);
+
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+
+    boolean result = r.returnCat(2);
+    assertTrue(result);
+    verify(c2).returnCat();
 	}
 
 	/**
@@ -262,7 +371,17 @@ public class RentACatUnitTest {
 	 */
 	@Test
 	public void testReturnFailureCatNumCats3() {
-		// TODO: Fill in
+		when(c1.getId()).thenReturn(1);
+    when(c2.getId()).thenReturn(2);
+    when(c3.getId()).thenReturn(3);
+    when(c2.getRented()).thenReturn(false);
+    r.addCat(c1);
+    r.addCat(c2);
+    r.addCat(c3);
+
+    boolean result = r.returnCat(2);
+    assertFalse(result);
+    verify(c2, never()).returnCat();
 	}
 
 }

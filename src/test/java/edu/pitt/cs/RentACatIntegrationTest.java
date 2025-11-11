@@ -1,17 +1,20 @@
 package edu.pitt.cs;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.FixMethodOrder;
-import org.junit.runners.MethodSorters;
-import static org.junit.Assert.*;
-
-import org.mockito.Mockito;
-import static org.mockito.Mockito.*;
-
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Method;
+
+import org.junit.After;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import org.junit.Before;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class RentACatIntegrationTest {
@@ -37,6 +40,16 @@ public class RentACatIntegrationTest {
 	public void setUp() throws Exception {
 		// INITIALIZE THE TEST FIXTURE
 
+		r = RentACat.createInstance(InstanceType.IMPL);
+		c1 = Cat.createInstance(InstanceType.IMPL, 1, "Jennyanydots");
+		c2 = Cat.createInstance(InstanceType.IMPL, 2, "Old Deuteronomy");
+		c3 = Cat.createInstance(InstanceType.IMPL, 3, "Mistoffelees");
+
+		// 5. Redirect system output from stdout to the "out" stream
+		// First, make a back up of System.out (which is the stdout to the console)
+		stdout = System.out;
+		out = new ByteArrayOutputStream();
+		System.setOut(new PrintStream(out));
 		// 1. Create a new RentACat object and assign to r using a call to RentACat.createInstance(InstanceType).
 		// Passing InstanceType.IMPL as the first parameter will create a real RentACat object using your RentACatImpl implementation.
 		// Passing InstanceType.MOCK as the first parameter will create a mock RentACat object using Mockito.
@@ -92,7 +105,16 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testGetCatNullNumCats0() {
-		// TODO: Fill in
+		try {
+			Method getCatMethod = r.getClass().getDeclaredMethod("getCat", int.class);
+			getCatMethod.setAccessible(true);
+			Cat kitty = (Cat) getCatMethod.invoke(r, 2);
+			assertNull("getCat should return null for invalid ID when no cats exist", kitty);
+			String expectedOutput = "Invalid cat ID." + newline;
+			assertEquals("System output should indicate invalid cat ID", expectedOutput, out.toString());
+		} catch (Exception e) {
+			fail("Reflection failed: " + e.getMessage());
+		}
 	}
 
 	/**
@@ -112,7 +134,18 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testGetCatNumCats3() {
-		// TODO: Fill in
+		try {
+			r.addCat(c1);
+			r.addCat(c2);
+			r.addCat(c3);
+			Method getCatMethod = r.getClass().getDeclaredMethod("getCat", int.class);
+			getCatMethod.setAccessible(true);
+			Cat result = (Cat) getCatMethod.invoke(r, 2);
+			assertNotNull("getCat should return a cat for valid ID", result);
+			assertEquals("Returned cat should have ID 2", 2, result.getId());
+		} catch (Exception e) {
+			fail("Reflection failed: " + e.getMessage());
+		}
 	}
 
 	/**
@@ -126,8 +159,10 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testListCatsNumCats0() {
-		// TODO: Fill in
+	String result = r.listCats();
+		assertEquals("listCats should return empty string when no cats exist", "", result);
 	}
+
 
 	/**
 	 * Test case for String listCats().
@@ -141,7 +176,14 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testListCatsNumCats3() {
-		// TODO: Fill in
+	  r.addCat(c1);
+		r.addCat(c2);
+		r.addCat(c3);
+		String result = r.listCats();
+		String expectedOutput = "ID 1. Jennyanydots" + newline + 
+								"ID 2. Old Deuteronomy" + newline + 
+								"ID 3. Mistoffelees" + newline;
+		assertEquals("listCats should return formatted list of all cats", expectedOutput, result);
 	}
 
 	/**
@@ -157,7 +199,11 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testRenameFailureNumCats0() {
-		// TODO: Fill in
+	boolean result = r.renameCat(2, "Garfield");
+		assertFalse("renameCat should return false for invalid ID when no cats exist", result);
+		assertEquals("c2 should retain original name", "Old Deuteronomy", c2.getName());
+		String expectedOutput = "Invalid cat ID." + newline;
+		assertEquals("System output should indicate invalid cat ID", expectedOutput, out.toString());
 	}
 
 	/**
@@ -172,9 +218,15 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testRenameNumCat3() {
-		// TODO: Fill in
+		r.addCat(c1);
+		r.addCat(c2);
+		r.addCat(c3);
+		boolean result = r.renameCat(2, "Garfield");
+		assertTrue("renameCat should return true for valid ID", result);
+		assertEquals("c2 should be renamed to Garfield", "Garfield", c2.getName());
 	}
 
+	
 	/**
 	 * Test case for boolean rentCat(int id).
 	 * 
@@ -188,7 +240,14 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testRentCatNumCats3() {
-		// TODO: Fill in
+		r.addCat(c1);
+		r.addCat(c2);
+		r.addCat(c3);
+		boolean result = r.rentCat(2);
+		assertTrue("rentCat should return true for valid available cat", result);
+		assertTrue("c2 should be rented", c2.getRented());
+		String expectedOutput = "Old Deuteronomy has been rented." + newline;
+		assertEquals("System output should confirm cat rental", expectedOutput, out.toString());
 	}
 
 	/**
@@ -205,7 +264,16 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testRentCatFailureNumCats3() {
-		// TODO: Fill in
+	r.addCat(c1);
+		r.addCat(c2);
+		r.addCat(c3);
+		r.rentCat(2);
+		out.reset();
+		boolean result = r.rentCat(2);
+		assertFalse("rentCat should return false for already rented cat", result);
+		assertTrue("c2 should stay rented", c2.getRented());
+		String expectedOutput = "Sorry, Old Deuteronomy is not here!" + newline;
+		assertEquals("System output should indicate cat is not available", expectedOutput, out.toString());
 	}
 
 	/**
@@ -222,9 +290,17 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testReturnCatNumCats3() {
-		// TODO: Fill in
+	r.addCat(c1);
+		r.addCat(c2);
+		r.addCat(c3);
+		r.rentCat(2);
+		out.reset(); 
+		boolean result = r.returnCat(2);
+		assertTrue("returnCat should return true for rented cat", result);
+		assertFalse("c2 should not be rented after return", c2.getRented());
+		String expectedOutput = "Welcome back, Old Deuteronomy!" + newline;
+		assertEquals("System output should welcome cat back", expectedOutput, out.toString());
 	}
-
 	/**
 	 * Test case for boolean returnCat(int id).
 	 * 
@@ -238,7 +314,14 @@ public class RentACatIntegrationTest {
 	 */
 	@Test
 	public void testReturnFailureCatNumCats3() {
-		// TODO: Fill in
+	r.addCat(c1);
+		r.addCat(c2);
+		r.addCat(c3);
+		boolean result = r.returnCat(2);
+		assertFalse("returnCat should return false for cat that wasn't rented", result);
+		assertFalse("c2 should stay not rented", c2.getRented());
+		String expectedOutput = "Old Deuteronomy is already here!" + newline;
+		assertEquals("System output should indicate cat is already here", expectedOutput, out.toString());
 	}
 
 }
